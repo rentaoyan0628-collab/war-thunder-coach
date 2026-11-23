@@ -1,0 +1,12 @@
+data/
+models/
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+.env
+.env.*
+*.mp4
+*.wav
+*.sqlite*
+mcp.local.json

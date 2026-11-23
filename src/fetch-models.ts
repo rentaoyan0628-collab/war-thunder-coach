@@ -1,0 +1,11 @@
+import {mkdirSync} from 'node:fs';
+import {db,put,root} from './coach';
+const {commit,vehicles}=await Bun.file(root+'/data/vehicles-10plus.json').json();
+const {tree}=await Bun.file(root+'/data/upstream-tree.json').json();
+const ids=new Set(vehicles.map((v:any)=>v.id));
+const paths=tree.filter((x:any)=>x.type==='blob'&&x.path.endsWith('.blkx')&&ids.has(x.path.split('/').at(-1).slice(0,-5))&&(/gamedata\/units\/tankmodels\//.test(x.path)||/gamedata\/flightmodels\/(?:fm\/)?[^/]+\.blkx$/.test(x.path)));
+mkdirSync(root+'/data/models',{recursive:true});let n=0;const failed:any[]=[];
+async function task(x:any){try{const file=root+'/data/models/'+x.path.replaceAll('/','__');let text:string;if(await Bun.file(file).exists())text=await Bun.file(file).text();else{const r=await fetch(`https://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/${commit}/${x.path}`);if(!r.ok)throw Error(String(r.status));text=await r.text();JSON.parse(text);await Bun.write(file,text);}const data=JSON.parse(text),entity=x.path.split('/').at(-1).slice(0,-5),url=`https://github.com/gszabi99/War-Thunder-Datamine/blob/${commit}/${x.path}`;
+ const facts:any[]=[];function walk(v:any,key:string){if(v!==null&&typeof v==='object')for(const [k,z] of Object.entries(v))walk(z,key?key+'.'+k:k);else facts.push([entity+':'+x.path+':'+key,entity,key,JSON.stringify(v),'unknown',commit,url,x.path+'#'+key,'raw configuration; meaning/unit must be checked']);}walk(data,'');db.transaction(()=>{const q=db.query('INSERT OR REPLACE INTO facts VALUES(?,?,?,?,?,?,?,?,?)');for(const f of facts)q.run(...f)})();put({id:'config:'+x.path,title:entity+' '+x.path,body:text,url,version:commit,kind:'raw_config'});n++;}catch(e){failed.push({path:x.path,error:String(e)})}}
+const selected=Bun.argv[2]?paths.filter((x:any)=>x.path.includes(Bun.argv[2])):paths;
+for(let i=0;i<selected.length;i+=6){await Promise.all(selected.slice(i,i+6).map(task));if(i%60===0)console.log(`${n}/${selected.length}`)}await Bun.write(root+'/data/model-import-report'+(Bun.argv[2]?'-repair':'')+'.json',JSON.stringify({commit,total:selected.length,imported:n,failed},null,2));console.log(JSON.stringify({total:selected.length,imported:n,failed:failed.length}));

@@ -1,0 +1,6 @@
+import {root} from './coach';
+import {mkdirSync} from 'node:fs';
+// Configurable regions: no assumption about a player's minimap position.
+const [input,configPath,out=root+'/data/hud']=Bun.argv.slice(2);if(!input||!configPath)throw Error('Usage: bun src/hud.ts <video> <regions.json> [output]');
+const cfg=await Bun.file(configPath).json();mkdirSync(out,{recursive:true});const manifest:any[]=[];
+for(const t of cfg.timestamps)for(const [name,r] of Object.entries(cfg.regions) as [string,any][]){if(!/^[a-z0-9_-]+$/i.test(name))throw Error('Region name must be a filename-safe identifier');const path=`${out}/${name}-${String(t).replace('.','_')}.png`;const filter=`crop=iw*${r.w}:ih*${r.h}:iw*${r.x}:ih*${r.y},scale=iw*${r.scale||2}:ih*${r.scale||2}`;const child=Bun.spawn(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',String(t),'-i',input,'-frames:v','1','-vf',filter,path],{stdout:'ignore',stderr:'pipe'});if(await child.exited)throw Error(await new Response(child.stderr).text());manifest.push({source:input,timestamp:t,region:name,normalized:r,path});}await Bun.write(out+'/manifest.json',JSON.stringify(manifest,null,2));console.log(JSON.stringify({frames:manifest.length,manifest:out+'/manifest.json'}));

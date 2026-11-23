@@ -1,0 +1,12 @@
+import {mkdirSync} from 'node:fs';
+import {homedir} from 'node:os';
+import {resolve,join} from 'node:path';
+import {fileURLToPath} from 'node:url';
+const project=fileURLToPath(new URL('..',import.meta.url)).replaceAll('\\','/');
+const target=resolve(Bun.argv[2]||join(homedir(),'.codex','skills','war-thunder-review'));
+const destination=join(target,'SKILL.md');
+if(await Bun.file(destination).exists()&&!Bun.argv.includes('--force'))throw Error('Skill exists; review it first, then pass --force to replace.');
+mkdirSync(target,{recursive:true});
+await Bun.write(destination,(await Bun.file(project+'/skill/SKILL.md').text()).replaceAll('<WT_COACH_HOME>',project));
+await Bun.write(project+'/mcp.local.json',JSON.stringify({mcpServers:{'war-thunder-reference':{command:'bun',args:[project+'/src/server.ts'],env:{WT_COACH_HOME:project}}}},null,2));
+console.log(JSON.stringify({skill:destination,mcpConfig:project+'/mcp.local.json'}));

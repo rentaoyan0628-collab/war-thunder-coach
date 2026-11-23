@@ -1,0 +1,13 @@
+{
+  "name": "war-thunder-coach",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent War Thunder replay review skill and local reference MCP",
+  "scripts": {
+    "coach": "bun src/coach.ts",
+    "test": "bun test",
+    "bootstrap": "bun src/bootstrap.ts",
+    "installSkill": "bun scripts/install-skill.ts"
+  }
+}
